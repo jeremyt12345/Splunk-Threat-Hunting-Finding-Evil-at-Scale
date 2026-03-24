@@ -29,3 +29,37 @@ Following along the document I was able to find this query "index="main" EventCo
 
 
 Which was correct but first I tried my own and created this "index="main" sourcetype="WinEventLog:sysmon" EventCode= 7 SourceImage"	C:\Windows\System32\rundll32.exe" and came back with nothing.
+
+
+The next question 
+
+Q3 "Navigate to http://[Target IP]:8000, open the "Search & Reporting" application, and find through an SPL search against all data any suspicious loads of clr.dll that could indicate a C# injection/execute-assembly attack. Then, again through SPL searches, find if any of the suspicious processes that were returned in the first place were used to temporarily execute code. Enter its name as your answer. Answer format: _.exe"
+
+Initially I was thining to use Event Code 7 (Sysmon Event ID 7 - Image loaded: Allows us to track dll loads, which is handy in detecting DLL hijacks.) but was having no success with that so to be honest I looked online for answers 3-5 but today I wanted to break down why they were right and why I couldnt find them. 
+
+So the query found was "index=* (ImageLoaded="*clr.dll*" OR ModuleLoaded="*clr.dll*")| table _time, host, User, ParentImage, Image, ImageLoaded, CommandLine" instead of looking for Event ID 7 we used the exact method. Then looking for unusaul processes e.g., rundll32.exe, notepad.exe, regsvr32.exe, etc.) that shouldn’t normally load .NET CLR.
+
+This is the false positive elimination by checking all of these.
+
+After that the defender will then specify the queries more "index=* (ImageLoaded="*clr.dll*" OR ModuleLoaded="*clr.dll*") 
+NOT (
+    Image="*Corsair*" OR 
+    Image="*Teams*" OR 
+    Image="*Update.exe" OR 
+    Image="*Squirrel.exe" OR 
+    Image="*taskhostw.exe" OR 
+    Image="*sdiagnhost.exe" OR 
+    Image="*tzsync.exe" OR 
+    Image="*PowerShell.exe" OR 
+    Image="*PresentationHost.exe" OR 
+    Image="*BackgroundDownload.exe" OR 
+    Image="*VisualStudio*" OR 
+    Image="*msiexec.exe" OR 
+    Image="*mmc.exe"
+)
+| table _time, host, User, ParentImage, Image, ImageLoaded, CommandLine"
+
+
+<img width="1250" height="424" alt="image" src="https://github.com/user-attachments/assets/b3fcbc03-83c7-4ead-8901-0c7dde1b42fa" />
+
+
